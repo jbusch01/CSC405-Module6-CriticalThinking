@@ -6,18 +6,18 @@ let normals = [];
 let numVertices = 0;
 let numSubdivisions = 3;
 
-let positionBuffedr, normalBuffer;
+let positionBuffer, normalBuffer;
 let aPositionLoc, aNormalLoc;
-let uModelViewMatrixLoc, uProjectionsMatrixLoc, uNormalMatrixLoc;
+let uModelViewMatrixLoc, uProjectionMatrixLoc, uNormalMatrixLoc;
 let uLightPositionLoc, uAmbientProductLoc, uDiffuseProductLoc, uSpecularProductLoc, uShininessLoc;
 
 let angle = 0;
-let lasTTime = 0;
+let lastTime = 0;
 
 window.onload = function () {
     canvas = document.getElementById('glCanvas');
     gl = canvas.getContext('webgl');
-    if (!gl) { this.alert('WebGL not supported'); return; }
+    if (!gl) { alert('WebGL not supported'); return; }
 
     resize();
     window.addEventListener('resize', resize);
@@ -35,10 +35,10 @@ window.onload = function () {
     aNormalLoc = gl.getAttribLocation(program, 'aNormal');
 
     uModelViewMatrixLoc = gl.getUniformLocation(program, 'uModelViewMatrix');
-    uProjectionsMatrixLoc = gl.getUniformLocation(program, 'uProjectionMatrix');
+    uProjectionMatrixLoc = gl.getUniformLocation(program, 'uProjectionMatrix');
     uNormalMatrixLoc = gl.getUniformLocation(program, 'uNormalMatrix');
 
-    uLightPositionLoc = gl.getUniformLocation(program, 'uLighPositionLoc');
+    uLightPositionLoc = gl.getUniformLocation(program, 'uLightPosition');
     uAmbientProductLoc = gl.getUniformLocation(program, 'uAmbientProduct');
     uDiffuseProductLoc = gl.getUniformLocation(program, 'uDiffuseProduct');
     uSpecularProductLoc = gl.getUniformLocation(program, 'uSpecularProduct');
@@ -71,7 +71,7 @@ window.onload = function () {
     gl.uniform1f(uShininessLoc, materialShininess);
 
     window.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrorUp') {
+        if (e.key === 'ArrowUp') {
             if (numSubdivisions < 6) {
                 numSubdivisions++;
                 buildSphere();
@@ -79,7 +79,7 @@ window.onload = function () {
                 console.log("Subdivision:", numSubdivisions);
             }
         }
-        if (e.key === 'ArrorDown') {
+        if (e.key === 'ArrowDown') {
             if (numSubdivisions > 0) {
                 numSubdivisions--;
                 buildSphere();
@@ -106,7 +106,7 @@ function compileShaderFromScript(type, id) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, src);
     gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPLETE_STATUS)) {
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
         console.error('Shader compile error:', gl.getShaderInfoLog(shader));
     }
     return shader;
@@ -162,7 +162,7 @@ function flatten4(arr) {
 function flatten3(arr) {
     const o = [];
     for (let i=0; i<arr.length; i++) {
-        o.push(arr[i][0], arr[i][1], arr[i][2], arr[i][3],);
+        o.push(arr[i][0], arr[i][1], arr[i][2]);
     }
     return o;
 }
@@ -225,10 +225,12 @@ function uploadGeometry() {
 }
 
 function identityMat4() {
-    return [1,0,0,0,
-            0,1,0,0,
-            0,0,1,0,
-            0,0,0,1];
+    return [
+        1,0,0,0,
+        0,1,0,0,
+        0,0,1,0,
+        0,0,0,1
+    ];
 }
 
 function multiplyMat4(a, b) {
@@ -245,7 +247,7 @@ function multiplyMat4(a, b) {
     return out;
 }
 
-function rotateMat4(angleDeg) {
+function rotateYMat4(angleDeg) {
     const a = angleDeg * Math.PI / 180;
     const c = Math.cos(a), s = Math.sin(a);
     return [
@@ -292,7 +294,7 @@ function render(timestamp) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     const aspect = gl.drawingBufferWidth / gl.drawingBufferHeight;
-    const projection = prospectiveMat4(45, aspect, 0.1, 10.0);
+    const projection = perspectiveMat4(45, aspect, 0.1, 10.0);
 
     const rotation = rotateYMat4(angle);
     const translation = translateMat4(0, 0, -3);
@@ -302,7 +304,7 @@ function render(timestamp) {
 
     gl.uniformMatrix4fv(uProjectionMatrixLoc, false, new Float32Array(projection));
     gl.uniformMatrix4fv(uModelViewMatrixLoc, false, new Float32Array(modelView));
-    gl.uniformMatrix4fv(uNormalMatrixLoc, false, new Float32Array(normalMatrix));
+    gl.uniformMatrix3fv(uNormalMatrixLoc, false, new Float32Array(normalMatrix));
 
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
