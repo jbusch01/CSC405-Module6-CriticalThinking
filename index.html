@@ -4,17 +4,20 @@
     <meta charset="UTF-8">
     <title>Recursive WebGL Sphere</title>
     <style>
+        /* Basic page styling: dark background and centered canvas */
         body { margin: 0; background: #111; color: #eee; }
         #glCanvas { width: 800px; height: 600px; display: block; margin: 20px auto; border: 1px solid #444; }
         #info { text-align: center; font-family: sans-serif; }
     </style>
 </head>
 <body>
+    <!-- Canvas where WebGL will render the recursively subdivided sphere -->
     <canvas id="glCanvas"></canvas>
     <div id="info">
         Use up / down arrow keys to change subdivision level (0 - 6).
     </div>
 
+    <!-- Vertex Shader: uses Blinn-Phong lighting and passes color to fragment shader-->
     <script id="vertex-shader" type="x-shader/x-vertex">
         attribute vec4 aPosition;
         attribute vec3 aNormal;
@@ -39,15 +42,18 @@
             vec3 V = normalize(-pos);
             vec3 R = reflect(-L, N);
 
+            // Diffuse term
             float Kd = max(dot(L, N), 0.0);
             vec4 diffuse = Kd * uDiffuseProduct;
 
+            // Specular term
             float Ks = 0.0;
             if (Kd > 0.0) {
                 Ks = pow(max(dot(R, V), 0.0), uShininess);
             }
             vec4 specular = Ks * uSpecularProduct;
 
+            // Ambient term
             vec4 ambient = uAmbientProduct;
 
             vColor = ambient + diffuse + specular;
@@ -59,6 +65,8 @@
         }
         </script>
 
+        <!-- Fragmeent shader: Combines Blinn-Phong with
+        multicolored gradient for rotation visibility-->
         <script id="fragment-shader" type="x-shader/x-fragment">
             precision mediump float;
 
@@ -78,6 +86,7 @@
             }
         </script>
 
+        <!-- Pulls in main JavaScript file -->
         <script src="sphere.js"></script>
 </body>
 </html>

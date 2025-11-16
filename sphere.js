@@ -1,5 +1,6 @@
 'use strict';
 
+// Global WebGL variables
 let canvas, gl;
 let positions = [];
 let normals = [];
@@ -14,62 +15,77 @@ let uLightPositionLoc, uAmbientProductLoc, uDiffuseProductLoc, uSpecularProductL
 let angle = 0;
 let lastTime = 0;
 
+// Entry point: runs when the window finishes loading
 window.onload = function () {
     canvas = document.getElementById('glCanvas');
     gl = canvas.getContext('webgl');
     if (!gl) { alert('WebGL not supported'); return; }
 
+    // Set initial viewport size and update when the window resizes
     resize();
     window.addEventListener('resize', resize);
 
+    // Enable depth testing and back-face culling for 3D rendering
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.CULL_FACE);
     gl.cullFace(gl.BACK);
 
+    // Compile shaders
     const vs = compileShaderFromScript(gl.VERTEX_SHADER, 'vertex-shader');
     const fs = compileShaderFromScript(gl.FRAGMENT_SHADER, 'fragment-shader');
     const program = createProgram(vs, fs);
     gl.useProgram(program);
 
+    // Look up attribute locations
     aPositionLoc = gl.getAttribLocation(program, 'aPosition');
     aNormalLoc = gl.getAttribLocation(program, 'aNormal');
 
+    // Lookup uniform locations for matrices
     uModelViewMatrixLoc = gl.getUniformLocation(program, 'uModelViewMatrix');
     uProjectionMatrixLoc = gl.getUniformLocation(program, 'uProjectionMatrix');
     uNormalMatrixLoc = gl.getUniformLocation(program, 'uNormalMatrix');
 
+    // Look up uniform locations for lighting parameters
     uLightPositionLoc = gl.getUniformLocation(program, 'uLightPosition');
     uAmbientProductLoc = gl.getUniformLocation(program, 'uAmbientProduct');
     uDiffuseProductLoc = gl.getUniformLocation(program, 'uDiffuseProduct');
     uSpecularProductLoc = gl.getUniformLocation(program, 'uSpecularProduct');
     uShininessLoc = gl.getUniformLocation(program, 'uShininess');
 
+    // Create GPU Buffers
     positionBuffer = gl.createBuffer();
     normalBuffer = gl.createBuffer();
 
+    // Build the initial sphere geometry and upload to GPU buffers
     buildSphere();
     uploadGeometry();
 
+    // --- Lighting and material setup ---
+    // Light components
     const lightPosition = [10.0, 0.5, 0.5, 1.0];
     const lightAmbient = [0.2, 0.2, 0.2, 1.0];
     const lightDiffuse = [1.0, 1.0, 1.0, 1.0];
     const lightSpecular = [1.0, 1.0, 1.0, 1.0];
 
+    // Material reflectance
     const materialAmbient = [0.7, 0.7, 0.7, 1.0];
     const materialDiffuse = [0.9, 0.9, 0.9, 1.0];
     const materialSpecular = [1.0, 1.0, 1.0, 1.0];
     const materialShininess = 64.0;
 
+    // Pre-multipy light and material terms
     const ambientProduct = multiplyVec4(lightAmbient, materialAmbient);
     const diffuseProduct = multiplyVec4(lightDiffuse, materialDiffuse);
     const specularProduct = multiplyVec4(lightSpecular, materialSpecular);
 
+    // Send lighting uniforms to shaders
     gl.uniform4fv(uLightPositionLoc, new Float32Array(lightPosition));
     gl.uniform4fv(uAmbientProductLoc, new Float32Array(ambientProduct));
     gl.uniform4fv(uDiffuseProductLoc, new Float32Array(diffuseProduct));
     gl.uniform4fv(uSpecularProductLoc, new Float32Array(specularProduct));
     gl.uniform1f(uShininessLoc, materialShininess);
 
+    // Keyboard controls for number of recursions (subdivisons)
     window.addEventListener('keydown', function (e) {
         if (e.key === 'ArrowUp') {
             if (numSubdivisions < 6) {
@@ -89,9 +105,11 @@ window.onload = function () {
         }
     });
 
+    // Start animation loop
     this.requestAnimationFrame(render);
 };
 
+// Adjust canvas size and viewport to match display size
 function resize() {
     if (!canvas || !gl) return;
     const w = canvas.clientWidth || 800;
@@ -101,6 +119,7 @@ function resize() {
     gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
 }
 
+// Compile shader from script tag by id
 function compileShaderFromScript(type, id) {
     const src = document.getElementById(id).textContent;
     const shader = gl.createShader(type);
@@ -112,6 +131,7 @@ function compileShaderFromScript(type, id) {
     return shader;
 }
 
+// Link vertex and fragment shaders in WebGL
 function createProgram(vs, fs) {
     const p = gl.createProgram();
     gl.attachShader(p, vs);
@@ -123,10 +143,12 @@ function createProgram(vs, fs) {
     return p;
 }
 
+// Utility: construct a vec4
 function vec4(x, y, z, w) {
     return [x, y, z, w];
 }
 
+// Linear interpolation between two vec4s
 function mixVec4(a, b, t) {
     return [
         (1 - t) * a[0] + t * b[0],
@@ -136,12 +158,14 @@ function mixVec4(a, b, t) {
     ];
 }
 
+// Normalize a vec4 position to lie on unit sphere
 function normalizePointOnSphere(v) {
     const x = v[0], y = v[1], z = v[2]
     const len = Math.sqrt(x*x + y*y + z*z);
     return [x/len, y/len, z/len, 1.0];
 }
 
+// Multiply two vec4s (used for light * material products)
 function multiplyVec4(a, b) {
     return [
         a[0]*b[0],
@@ -151,6 +175,7 @@ function multiplyVec4(a, b) {
     ];
 }
 
+// Flatten an array of vec4 into plain Float32Array compatible list
 function flatten4(arr) {
     const o = [];
     for (let i=0; i<arr.length; i++) {
@@ -159,6 +184,7 @@ function flatten4(arr) {
     return o;
 }
 
+// Flatten an array of vec3 into plain Float32Array compatible list
 function flatten3(arr) {
     const o = [];
     for (let i=0; i<arr.length; i++) {
@@ -167,19 +193,23 @@ function flatten3(arr) {
     return o;
 }
 
+// Build the sphere geometry from single tetrahedron
 function buildSphere() {
     positions = [];
     normals = [];
     numVertices = 0;
 
+    // Tetrahedron vertices
     const va = vec4(0.0, 0.0, -1.0, 1);
     const vb = vec4(0.0, 0.942809, 0.333333, 1);
     const vc = vec4(-0.816497, -0.471405, 0.333333, 1);
     const vd = vec4(0.816497, -0.471405, 0.333333, 1);
 
+    // Recursively subdivide all four faces of tetrahedron
     tetrahedron(va, vb, vc, vd, numSubdivisions);
 }
 
+// Subdivide four faces of tetrahedron
 function tetrahedron(a, b, c, d, n) {
     divideTriangle(a, b, c, n);
     divideTriangle(d, c, b, n);
@@ -187,21 +217,26 @@ function tetrahedron(a, b, c, d, n) {
     divideTriangle(a, c, d, n);
 }
 
+// Recursively subdivide one triangle into four smaller ones
 function divideTriangle(a, b, c, count) {
     if (count > 0) {
+        // Compute midpoints and renormllize back to sphere
         let ab = normalizePointOnSphere(mixVec4(a, b, 0.5));
         let ac = normalizePointOnSphere(mixVec4(a, c, 0.5));
         let bc = normalizePointOnSphere(mixVec4(b, c, 0.5));
 
+        // Recurse on the four new triangles
         divideTriangle(a, ab, ac, count - 1);
         divideTriangle(ab, b, bc, count - 1);
         divideTriangle(bc, c, ac, count - 1);
         divideTriangle(ab, bc, ac, count - 1);
     } else {
+        // Base case
         triangle(a, b, c);
     }
 }
 
+// Add a single triangle to the positions and normals arrays
 function triangle(a ,b, c) {
     positions.push(a, b, c);
     normals.push(
@@ -212,18 +247,22 @@ function triangle(a ,b, c) {
     numVertices += 3;
 }
 
+// Upload current positions and normals to GPU buffers
 function uploadGeometry() {
+    // Positions
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(flatten4(positions)), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(aPositionLoc);
     gl.vertexAttribPointer(aPositionLoc, 4, gl.FLOAT, false, 0, 0);
 
+    // Normals
     gl.bindBuffer(gl.ARRAY_BUFFER, normalBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(flatten3(normals)), gl.STATIC_DRAW);
     gl.enableVertexAttribArray(aNormalLoc);
     gl.vertexAttribPointer(aNormalLoc, 3, gl.FLOAT, false, 0, 0);
 }
 
+// Create 4x4 identity matrix
 function identityMat4() {
     return [
         1,0,0,0,
@@ -233,6 +272,7 @@ function identityMat4() {
     ];
 }
 
+// Multiply two 4x4 matrices
 function multiplyMat4(a, b) {
     const out = new Array(16);
     for (let r = 0; r < 4; r++) {
@@ -247,6 +287,7 @@ function multiplyMat4(a, b) {
     return out;
 }
 
+// Rotation matrix around Y-axis
 function rotateYMat4(angleDeg) {
     const a = angleDeg * Math.PI / 180;
     const c = Math.cos(a), s = Math.sin(a);
@@ -258,6 +299,7 @@ function rotateYMat4(angleDeg) {
     ];
 }
 
+// Translation matrix
 function translateMat4(tx, ty, tz) {
     const m = identityMat4();
     m[12] = tx;
@@ -266,6 +308,7 @@ function translateMat4(tx, ty, tz) {
     return m;
 }
 
+// Perspective projection matrix
 function perspectiveMat4(fovyDeg, aspect, near, far) {
     const f = 1.0 / Math.tan((fovyDeg * Math.PI / 180) / 2);
     const nf = 1 / (near - far);
@@ -277,6 +320,7 @@ function perspectiveMat4(fovyDeg, aspect, near, far) {
     ];
 }
 
+// Extract a 3x3 normal matrix from upper-left of 4x4 model-view matrix
 function normalMatrixFromModelView(mv) {
     return [
         mv[0], mv[1], mv[2],
@@ -285,28 +329,38 @@ function normalMatrixFromModelView(mv) {
     ];
 }
 
+// Render loop: updates rotation, sets matrices, draws sphere for each frame
 function render(timestamp) {
     const dt = (timestamp - lastTime) * 0.001;
     lastTime = timestamp;
+
+    // Rotates about Y-axis at 30 degrees per second
     angle += dt * 30;
 
+    // Clear frame and depth bufgfers
     gl.clearColor(0.05, 0.05, 0.08, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+    // Compute projection matrix
     const aspect = gl.drawingBufferWidth / gl.drawingBufferHeight;
     const projection = perspectiveMat4(45, aspect, 0.1, 10.0);
 
+    // Model-view: rotate sphere, then translate away from camera
     const rotation = rotateYMat4(angle);
     const translation = translateMat4(0, 0, -3);
     const modelView = multiplyMat4(rotation, translation);
 
+    // Normal matrix from model-view
     const normalMatrix = normalMatrixFromModelView(modelView);
 
+    // Upload matrices to shaders
     gl.uniformMatrix4fv(uProjectionMatrixLoc, false, new Float32Array(projection));
     gl.uniformMatrix4fv(uModelViewMatrixLoc, false, new Float32Array(modelView));
     gl.uniformMatrix3fv(uNormalMatrixLoc, false, new Float32Array(normalMatrix));
 
+    // Draw all triangles of sphere
     gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
+    // Request next frame
     requestAnimationFrame(render)
 }
