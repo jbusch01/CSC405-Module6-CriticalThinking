@@ -55,8 +55,8 @@ window.onload = function () {
     const lightDiffuse = [1.0, 1.0, 1.0, 1.0];
     const lightSpecular = [1.0, 1.0, 1.0, 1.0];
 
-    const materialAmbient = [0.2, 0.3, 0.8, 1.0];
-    const materialDiffuse = [0.2, 0.3, 0.8, 1.0];
+    const materialAmbient = [0.7, 0.7, 0.7, 1.0];
+    const materialDiffuse = [0.9, 0.9, 0.9, 1.0];
     const materialSpecular = [1.0, 1.0, 1.0, 1.0];
     const materialShininess = 64.0;
 
@@ -298,7 +298,7 @@ function render(timestamp) {
 
     const rotation = rotateYMat4(angle);
     const translation = translateMat4(0, 0, -3);
-    const modelView = multiplyMat4(translation, rotation);
+    const modelView = multiplyMat4(rotation, translation);
 
     const normalMatrix = normalMatrixFromModelView(modelView);
 
