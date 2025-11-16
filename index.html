@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Recursive WebGL Sphere</title>
+    <style>
+        body { margin: 0; background: #111; color: #eee; }
+        #glCanvas { width: 800px; height: 600px; display: block; margin: 20px auto; border: 1px solid #444; }
+        #info { text-align: center; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+    <canvas id="glCanvas"></canvas>
+    <div id="info">
+        Use up / down arrow keys to change subdivision level (0 - 6).
+    </div>
+
+    <script id="vertex-shader" type="x-shader/x-vertex">
+        attribute vec4 aPostion;
+        attribute vec3 aNormal;
+
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjectionMatrix;
+        uniform mat3 uNormalMatrix;
+
+        uniform vec4 uLightPosition;
+        uniform vec4 uAmbientProduct;
+        uniform vec4 uDiffuseProduct;
+        uniform vec4 uSpecularProduct;
+        uniform float uShininess;
+
+        varying vec4 vColor;
+
+        void main(void) {
+            vec3 pos = (uModelViewMatrix * aPosition).xyz;
+            vec3 N = normalize(uNormalMatrix * aNormal);
+            vec3 L = normalize(uLightPosition.xyz - pos);
+            vec3 V = normalize(-pos);
+            vec3 R = reflect(-L, N);
+
+            float Kd = max(dot(L, N), 0.0);
+            vec4 diffuse = Kd * uDiffuseProduct;
+
+            float Ks = 0.0;
+            if (Kd > 0.0) {
+                Ks = pow(max(dot(R, V), 0.0), uShininess);
+            }
+            vec4 specular = Ks * uSpecularProduct;
+
+            vec4 ambient = uAmbientProduct;
+
+            vColor = ambient + diffuse + specular;
+            vColor.a = 1.0;
+
+            gl_Position = uProjectionMatrix * uModelViewMatirx * aPosition;
+        }
+        </script>
+
+        <script id="fragment-shader" type="x-shader/x-fragment">
+        precision mediump float;
+        varying vec4 vColor;
+        void main(void) {
+            gl_FragColor = vColor;
+        }
+        </script>
+
+        <script src="sphere.js"></script>
+</body>
+</html>
