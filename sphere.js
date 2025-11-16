@@ -27,7 +27,7 @@ window.onload = function () {
     gl.cullFace(gl.BACK);
 
     const vs = compileShaderFromScript(gl.VERTEX_SHADER, 'vertex-shader');
-    const fs = compileShaderFromScript(gl.FRAGEMENT_SHADER, 'aNormal');
+    const fs = compileShaderFromScript(gl.FRAGMENT_SHADER, 'fragment-shader');
     const program = createProgram(vs, fs);
     gl.useProgram(program);
 
@@ -106,9 +106,8 @@ function compileShaderFromScript(type, id) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, src);
     gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPLETE_STATUS) &&
-        !gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
+    if (!gl.getShaderParameter(shader, gl.COMPLETE_STATUS)) {
+        console.error('Shader compile error:', gl.getShaderInfoLog(shader));
     }
     return shader;
 }
@@ -128,7 +127,7 @@ function vec4(x, y, z, w) {
     return [x, y, z, w];
 }
 
-function mixVec4 (a, b, t) {
+function mixVec4(a, b, t) {
     return [
         (1 - t) * a[0] + t * b[0],
         (1 - t) * a[1] + t * b[1],
@@ -144,7 +143,12 @@ function normalizePointOnSphere(v) {
 }
 
 function multiplyVec4(a, b) {
-    return [a[0]*b[0], a[1]*b[1], a[2]*b[2], a[3]*b[4],];
+    return [
+        a[0]*b[0],
+        a[1]*b[1],
+        a[2]*b[2],
+        a[3]*b[3],
+    ];
 }
 
 function flatten4(arr) {
@@ -194,7 +198,7 @@ function divideTriangle(a, b, c, count) {
         divideTriangle(bc, c, ac, count - 1);
         divideTriangle(ab, bc, ac, count - 1);
     } else {
-        divideTriangle(a, b, c);
+        triangle(a, b, c);
     }
 }
 
@@ -221,15 +225,20 @@ function uploadGeometry() {
 }
 
 function identityMat4() {
-    retrun [1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1];
+    return [1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,0,1];
 }
 
 function multiplyMat4(a, b) {
     const out = new Array(16);
-    for (let r=0; r<4; r++) {
-        for (let c=0; c<4; c++) {
+    for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 4; c++) {
             let sum = 0;
-            for (let k=0; k<4; k++) sum += a[r*4+k] * b[k*4+c];
+            for (let k = 0; k < 4; k++) {
+                sum += a[r * 4 + k] * b[k * 4 + c];
+            }
             out[r*4+c] = sum;
         }
     }
@@ -259,10 +268,10 @@ function perspectiveMat4(fovyDeg, aspect, near, far) {
     const f = 1.0 / Math.tan((fovyDeg * Math.PI / 180) / 2);
     const nf = 1 / (near - far);
     return [
-        f/aspect,0,0,0,
-        0,f,0,0,
-        0,0,(far+near)*nf,-1,
-        0,0,(2*far*near)*nf,0
+        f / aspect, 0, 0, 0,
+        0, f, 0, 0,
+        0, 0, (far + near) * nf, -1,
+        0, 0, (2 * far * near) * nf, 0
     ];
 }
 
@@ -291,7 +300,7 @@ function render(timestamp) {
 
     const normalMatrix = normalMatrixFromModelView(modelView);
 
-    gl.uniformMatrix4fv(uProjectionsMatrixLoc, false, new Float32Array(projection));
+    gl.uniformMatrix4fv(uProjectionMatrixLoc, false, new Float32Array(projection));
     gl.uniformMatrix4fv(uModelViewMatrixLoc, false, new Float32Array(modelView));
     gl.uniformMatrix4fv(uNormalMatrixLoc, false, new Float32Array(normalMatrix));
 
