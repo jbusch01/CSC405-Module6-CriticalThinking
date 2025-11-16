@@ -3,7 +3,7 @@
 let canvas, gl;
 let positions = [];
 let normals = [];
-let numVerices = 0;
+let numVertices = 0;
 let numSubdivisions = 3;
 
 let positionBuffedr, normalBuffer;
@@ -205,7 +205,7 @@ function triangle(a ,b, c) {
         [b[0], b[1], b[2]],
         [c[0], c[1], c[2]]
     );
-    numVerices += 3;
+    numVertices += 3;
 }
 
 function uploadGeometry() {
@@ -295,7 +295,7 @@ function render(timestamp) {
     gl.uniformMatrix4fv(uModelViewMatrixLoc, false, new Float32Array(modelView));
     gl.uniformMatrix4fv(uNormalMatrixLoc, false, new Float32Array(normalMatrix));
 
-    gl.drawArrays(gl.TRIANGLES, 0, numVeritces);
+    gl.drawArrays(gl.TRIANGLES, 0, numVertices);
 
     requestAnimationFrame(render)
 }
