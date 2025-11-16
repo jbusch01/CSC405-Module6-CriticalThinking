@@ -50,7 +50,7 @@ window.onload = function () {
     buildSphere();
     uploadGeometry();
 
-    const lightPosition = [2.0, 2.0, 2.0, 1.0];
+    const lightPosition = [10.0, 0.5, 0.5, 1.0];
     const lightAmbient = [0.2, 0.2, 0.2, 1.0];
     const lightDiffuse = [1.0, 1.0, 1.0, 1.0];
     const lightSpecular = [1.0, 1.0, 1.0, 1.0];
